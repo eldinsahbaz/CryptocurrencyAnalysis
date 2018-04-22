@@ -1,0 +1,222 @@
+---
+title: "Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library('tseries') 
+library('forecast')
+library('urca')
+library('MTS')
+library('tsDyn')
+library('vars')
+library('ecm')
+library('stats')
+library('rugarch')
+library('ggplot2')
+library('cowplot')
+
+bitcoin <- read.csv("bitcoin.csv")
+litecoin <- read.csv("litecoin.csv")
+ethereum <- read.csv("ethereum.csv")
+cardano <- read.csv("cardano.csv")
+ripple <- read.csv("ripple.csv")
+stellar <- read.csv("stellar.csv")
+```
+
+
+```{r}
+tsdisplay(bitcoin$Close)
+tsdisplay(litecoin$Close)
+tsdisplay(ethereum$Close)
+tsdisplay(cardano$Close)
+tsdisplay(ripple$Close)
+tsdisplay(stellar$Close)
+```
+
+```{r}
+ts.plot(bitcoin$Close)
+ts.plot(litecoin$Close)
+ts.plot(ethereum$Close)
+ts.plot(ripple$Close)
+ts.plot(stellar$Close)
+```
+
+```{r}
+tsdisplay(bitcoin$Volume)
+tsdisplay(litecoin$Volume)
+tsdisplay(ethereum$Volume)
+tsdisplay(cardano$Volume)
+tsdisplay(ripple$Volume)
+tsdisplay(stellar$Volume)
+```
+
+```{r}
+data.all <- data.frame(bitcoin[bitcoin$Year %in% c(2017, 2018),]$Close, litecoin[litecoin$Year %in% c(2017, 2018),]$Close, ethereum[ethereum$Year %in% c(2017, 2018),]$Close, ripple[ripple$Year %in% c(2017, 2018),]$Close, stellar[stellar$Year %in% c(2017, 2018),]$Close)
+colnames(data.all) <- c("bitcoin", "litecoin", "ethereum", "ripple", "stellar")
+round(cor(data.all, method= "kendall"), 2)
+ccm(data.all)
+```
+
+```{r}
+tsdisplay(log(bitcoin$Close))
+tsdisplay(log(litecoin$Close))
+tsdisplay(log(ethereum$Close))
+tsdisplay(log(cardano$Close))
+tsdisplay(log(ripple$Close))
+tsdisplay(log(stellar$Close))
+```
+
+```{r}
+tsdisplay(log(bitcoin[1435:(nrow(bitcoin)),]$Volume))
+tsdisplay(log(bitcoin[1435:(nrow(bitcoin)),]$Volume))
+tsdisplay(log(ethereum$Volume))
+tsdisplay(log(cardano$Volume))
+tsdisplay(log(ripple[1337:(nrow(ripple)),]$Volume))
+tsdisplay(log(stellar[971:(nrow(stellar)),]$Volume))
+```
+
+```{r}
+data.all.log <- data.frame(log(bitcoin[bitcoin$Year %in% c(2017, 2018),]$Close), log(litecoin[litecoin$Year %in% c(2017, 2018),]$Close), log(ethereum[ethereum$Year %in% c(2017, 2018),]$Close), log(ripple[ripple$Year %in% c(2017, 2018),]$Close), log(stellar[stellar$Year %in% c(2017, 2018),]$Close))
+colnames(data.all.log) <- c("bitcoin", "litecoin", "ethereum", "ripple", "stellar")
+round(cor(data.all.log), 2)
+ccm(data.all.log)
+```
+
+```{r}
+btc <- bitcoin[1435:(nrow(bitcoin)),]
+ltc <- litecoin[1435:(nrow(litecoin)),]
+```
+
+```{r}
+ccf(btc$Close, ltc$Close)
+ccf(log(btc$Close), log(ltc$Close))
+
+ccf(diff(log(btc$Close)), diff(log(ltc$Close)))
+ccf(diff(btc$Close), diff(ltc$Close))
+```
+
+```{r}
+btcltc_lm0 <- lm(log(ltc$Close)~log(btc$Close))
+summary(btcltc_lm0)
+tsdisplay(btcltc_lm0$residuals)
+
+btcltc_lm1 <- lm(diff(log(ltc$Close))~diff(log(btc$Close)))
+summary(btcltc_lm1)
+tsdisplay(btcltc_lm1$residuals)
+
+btcltc_lm5 <- lm(diff(log(ltc$Close))~diff(log(btc$Close)) + ts(log(btc$Volume[2: (nrow(btc))])))
+summary(btcltc_lm5)
+tsdisplay(btcltc_lm5$residuals)
+
+btcltc_lm2 <- lm(log(ltc$Close)~log(btc$Close) + ts(lag(log(btc$Volume))))
+summary(btcltc_lm2)
+tsdisplay(btcltc_lm2$residuals)
+
+btcltc_lm3 <- lm(ltc$Close~btc$Close + ts(lag(ltc$Volume)))
+summary(btcltc_lm3)
+tsdisplay(btcltc_lm3$residuals)
+
+btcltc_lm4 <- lm(ltc$Close~ts(lag(ltc$Volume)))
+summary(btcltc_lm4)
+tsdisplay(btcltc_lm4$residuals)
+```
+
+```{r}
+btcltc_m4 <- auto.arima(log(litecoin[1435:(nrow(litecoin)),]$Close), xreg = log(bitcoin[1435:(nrow(bitcoin)),]$Volume))
+summary(btcltc_m4)
+btcltc_m5 <- auto.arima(litecoin[1435:(nrow(litecoin)),]$Close, xreg = log(bitcoin[1435:(nrow(bitcoin)),]$Volume))
+summary(btcltc_m5)
+btcltc_m6 <- auto.arima(log(litecoin[1435:(nrow(litecoin)),]$Close), xreg = bitcoin[1435:(nrow(bitcoin)),]$Volume)
+summary(btcltc_m6)
+btcltc_m7 <- auto.arima(litecoin[1435:(nrow(litecoin)),]$Close, xreg = bitcoin[1435:(nrow(bitcoin)),]$Volume)
+summary(btcltc_m7)
+btcltc_m8 <- auto.arima(diff(log(litecoin[1435:(nrow(litecoin)),]$Close)), xreg = diff(log(bitcoin[1435:(nrow(bitcoin)),]$Close)))
+summary(btcltc_m8)
+intermediate <- data.frame(bitcoin[1435:(nrow(bitcoin)),]$Volume)
+btcltc_m9 <- auto.arima(diff(log(litecoin[1435:(nrow(litecoin)),]$Close)), xreg = cbind(intermediate[2:(nrow(intermediate)),], diff(log(bitcoin[1435:(nrow(bitcoin)),]$Close))))
+summary(btcltc_m9)
+
+temp <- diff(log(bitcoin[1435:(nrow(bitcoin)),])$Close)
+tempVol <- diff(log(bitcoin[1435:(nrow(bitcoin)),])$Volume)
+btcltc_m8 <- auto.arima(temp, xreg = tempVol)
+summary(btcltc_m8)
+```
+
+```{r}
+l1 <- VARorder(data.all)
+l2 <- VARorderI(data.all)
+
+var1 <- VAR(data.all, p = l1$aicor)
+var2 <- VAR(data.all, p = l1$bicor)
+var3 <- VAR(data.all, p = l2$aicor)
+var4 <- VAR(data.all, p = l2$bicor)
+```
+
+```{r}
+l3 <- VARorder(data.all.log)
+l4 <- VARorderI(data.all.log)
+
+var5 <- VAR(data.all.log, p = l1$aicor)
+var6 <- VAR(data.all.log, p = l1$bicor)
+var7 <- VAR(data.all.log, p = l2$aicor)
+var8 <- VAR(data.all.log, p = l2$bicor)
+```
+
+```{r}
+ripplestellar <- data.frame(ripple$Close[1337:(nrow(ripple))], stellar$Close[971:(nrow(stellar))])
+ccm(ripplestellar, lags = 24)
+
+ripplestellar_test <- ca.jo(ripplestellar, type = 'trace', ecdet = c('none'))
+summary(ripplestellar_test)
+
+ecmvar <- cajorls(ripplestellar_test)
+ripplestellar_vector <- ecmvar$beta
+
+ripplestellar_stationary <- ripplestellar_vector[1]*ripplestellar[colnames(ripplestellar)[1]] + ripplestellar_vector[2]*ripplestellar[colnames(ripplestellar)[2]]
+
+adf.test(ts(ripplestellar_stationary))
+pacf(ripplestellar_stationary)
+acf(ripplestellar_stationary)
+
+l1 <- VARorder(ripplestellar, maxp = 30)
+l2 <- VARorderI(ripplestellar, maxp = 30)
+
+l1$aicor
+l1$bicor
+l2$aicor
+l2$bicor
+
+ripplestellar_ecmvar <- ECMvar(ripplestellar, 4, ripplestellar_vector)
+ripplestellar_ecmvar$beta
+```
+
+```{r}
+bitcoinlitecoin <- data.frame(log(bitcoin$Close[1435:(nrow(bitcoin))]), log(litecoin$Close[1435:(nrow(litecoin))]))
+
+bitcoinlitecoin_test <- ca.jo(bitcoinlitecoin, type = 'trace', ecdet = c('none'))
+summary(bitcoinlitecoin_test)
+
+ecmvar2 <- cajorls(bitcoinlitecoin_test)
+bitcoinlitecoin_vector <- ecmvar2$beta
+bitcoinlitecoin_stationary <- bitcoinlitecoin_vector[1]*bitcoinlitecoin[colnames(bitcoinlitecoin)[1]] + bitcoinlitecoin_vector[2]*bitcoinlitecoin[colnames(bitcoinlitecoin)[2]]
+
+adf.test(ts(bitcoinlitecoin_stationary))
+pacf(bitcoinlitecoin_stationary)
+acf(bitcoinlitecoin_stationary)
+
+l12 <- VARorder(bitcoinlitecoin, maxp = 30)
+l22 <- VARorderI(bitcoinlitecoin, maxp = 30)
+
+l12$aicor
+l12$bicor
+l22$aicor
+l22$bicor
+
+bitcoinlitecoin_ecmvar <- ECMvar(bitcoinlitecoin, 4, bitcoinlitecoin_vector)
+bitcoinlitecoin_ecmvar$beta
+```
